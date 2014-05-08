@@ -1,0 +1,15 @@
+{
+  "name": "playmidnight",
+  "title": "Play Midnight for Google Play Music™",
+
+  "id": "playmidnight@plugins.christieman.com",
+  "description": "A theme created for Google Play Music to give your eyes a break with a darker layout.",
+
+  "author": "Chris Tieman (http://christieman.com)",
+
+  "license": "MPL 2.0",
+  "version": "1.0.2",
+
+  "icon": "icons/icon.png",
+  "icon64": "icons/icon64.png"
+}
