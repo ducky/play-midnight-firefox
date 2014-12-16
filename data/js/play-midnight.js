@@ -8,10 +8,23 @@ var PlayMidnightOptions = {
 		var pm = this;
 
 		var favIcon = $('#play-midnight-options #favicon');
+		var styled = $('#play-midnight-options #styled');
+		var recentActivity = $('#play-midnight-options #recentActivity');
 		var themeColor = $('#play-midnight-options #' + options.theme + '.theme-color');
 
-		favIcon.attr( 'checked', options.favicon ).closest('.option').addClass('selected');
-		themeColor.attr( 'checked', true ).closest('.option').addClass('selected');
+		if ( options.favicon ) {
+			favIcon.prop( 'checked', true ).closest('.option').addClass('selected');
+		}
+
+		if ( options.styled ) {
+			styled.prop( 'checked', true ).closest('.option').addClass('selected');
+		}
+
+		if ( options.recentActivity ) {
+			recentActivity.prop( 'checked', true ).closest('.option').addClass('selected');
+		}
+
+		themeColor.prop( 'checked', true ).closest('.option').addClass('selected');
 
 		$('#play-midnight-options #save').addClass( options.theme );
 		$('#play-midnight-options .option').on('click', function() {
@@ -32,6 +45,8 @@ var PlayMidnightOptions = {
 	save: function( callback ) {
 		/* Options Values */
 		var favicon = $('#play-midnight-options #favicon').is(':checked');
+		var styled = $('#play-midnight-options #styled').is(':checked');
+		var recentActivity = $('#play-midnight-options #recentActivity').is(':checked');
 		var theme = $('#play-midnight-options .theme-color:checked').attr('id');
 
 		/* Status Update Text */
@@ -40,13 +55,15 @@ var PlayMidnightOptions = {
 		/* Tell Main.js to Save Options */
 		self.port.emit( 'save-options', {
 			favicon: favicon,
+			styled: styled,
+			recentActivity: recentActivity,
 			theme: theme
 		});
 
 		/* Send Feedback to User on Save */
 		self.port.on( 'options-saved', function (result) {
 			if ( result ) {
-				
+
 				status.fadeIn(500, function() {
 					setTimeout(function() {
 						status.fadeOut(500, function() {
@@ -85,6 +102,11 @@ var PlayMidnight = {
 			/* Inject Stylesheet, Favicon, and Options */
 			pm.injectStyle();
 			pm.updateFavicon();
+
+			/*if ( pm.options.recentActivity === true ) {
+				pm.addSortOptions();
+			}*/
+
 			pm.injectOptions( function() {
 
 				/* Populate Option Checkboxes */
@@ -114,16 +136,26 @@ var PlayMidnight = {
 
 	/* Inject Stylesheet */
 	injectStyle: function() {
-
 		/* Get Saved Theme Color */
 		var theme = this.options.theme;
 
 		/* Create Stylesheet */
-		var style = $('<link>', {
-			rel: 'stylesheet',
-			type: 'text/css',
-			href: this.options.pluginUrl + 'css/play-midnight-' + theme + '.css'
-		});
+		var style = null;
+		if ( this.options.styled === true ) {
+			style = $('<link>', {
+				rel: 'stylesheet',
+				type: 'text/css',
+				href: this.options.pluginUrl + 'css/play-midnight-' + theme + '.css'
+			});
+		} else {
+			style = $('<link>', {
+				rel: 'stylesheet',
+				type: 'text/css',
+				href: this.options.pluginUrl + 'css/play-midnight-options.css'
+			});
+		}
+
+		/* Inject Stylesheet */
 		$('head').append(style);
 	},
 
@@ -149,7 +181,7 @@ var PlayMidnight = {
 
 		/* Add Button to Nav Bar */
 		$('#headerBar .nav-bar').prepend( button );
-		
+
 		/* Callback Function */
 		if ( typeof callback === 'function' ) {
 			callback();
@@ -200,6 +232,50 @@ var PlayMidnight = {
 					.append(header)
 					.append(credits));
 		}
+	},
+
+	/* Add Recent Activity Sidebar / Filters */
+	addSortOptions: function() {
+		var sortHtml = [
+			'<div id="recent-sort" class="tab-container">',
+			' <a class="header-tab-title selected" data-reason="0">All</a>',
+			' <a class="header-tab-title" data-reason="2">Added</a>',
+			' <a class="header-tab-title" data-reason="3">Played</a>',
+			' <a class="header-tab-title" data-reason="5">Created</a>',
+			'</div>',
+		].join('');
+
+		// Add a link directly to Recent, after the first "Listen Now" link
+		$('<a data-type="recent" class="nav-item-container tooltip" href="">Recent Activity</a>')
+			.insertAfter('#nav_collections a:nth-child(2)');
+
+		// Add sort links to the header
+		function toggleRecentUI() {
+			// Only add them if "Recent" string is present and we're not already in this view.
+			// Otherwise remove the UI completely.
+			if ( $(this).children('.tab-text:contains(Recent)').length && ! $(this).children('#recent-sort').length ) {
+				$(this).append(sortHtml);
+			} else {
+				$('#recent-sort').remove();
+			}
+			$(this).one('DOMSubtreeModified', toggleRecentUI);
+		}
+
+		// Make sure this only fires once or else we would be in an infinite loop,
+		// since the function itself modifies the DOM subtree.
+		$('#breadcrumbs').one('DOMSubtreeModified', toggleRecentUI);
+
+		// Filter toggling behavior
+		$('#breadcrumbs').on('click', 'a', function() {
+			var $this = $(this);
+			var reason = parseInt($this.data('reason'));
+			var selector = (reason === 0 ? '*' : '[data-reason=' + reason + ']');
+			var $cards = $('#music-content .card');
+
+			$this.addClass('selected').siblings().removeClass('selected');
+			$cards.filter(selector).show();
+			$cards.not(selector).hide();
+		});
 	}
 };
 
