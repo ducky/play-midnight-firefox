@@ -1,9 +1,9 @@
-jQuery(function($){
+(function($){
 
-/* Responsible for Loading/Saving Options */
+// Play Midnight Options
+// Load and Populate options from Firefox storage
 var PlayMidnightOptions = {
-
-	/* Load Options and Populate Checkboxes */
+	// Populate Options Page (Checkboxes)
 	populate: function( options ) {
 		var pm = this;
 
@@ -32,7 +32,7 @@ var PlayMidnightOptions = {
 		});
 	},
 
-	/* Add 'Selected' Class to Main Option Div */
+	// Update Classes on Checkbox Select
 	doSelect: function( ele ) {
 		var option = $(ele);
 		var group = option.closest('.options-group');
@@ -41,18 +41,18 @@ var PlayMidnightOptions = {
 		option.addClass('selected');
 	},
 
-	/* Save Options to Simple Storage */
+	// Save Settings to Simple Storage
 	save: function( callback ) {
-		/* Options Values */
+		// Get All Settings Values
 		var favicon = $('#play-midnight-options #favicon').is(':checked');
 		var styled = $('#play-midnight-options #styled').is(':checked');
 		var recentActivity = $('#play-midnight-options #recentActivity').is(':checked');
 		var theme = $('#play-midnight-options .theme-color:checked').attr('id');
 
-		/* Status Update Text */
+		// Status Update Text
 		var status = $('#play-midnight-options #status');
 
-		/* Tell Main.js to Save Options */
+		// Tell Main.js to Save Options
 		self.port.emit( 'save-options', {
 			favicon: favicon,
 			styled: styled,
@@ -60,68 +60,62 @@ var PlayMidnightOptions = {
 			theme: theme
 		});
 
-		/* Send Feedback to User on Save */
-		self.port.on( 'options-saved', function (result) {
-			if ( result ) {
-
+		// Send Feedback to User on Save
+		self.port.on('options-saved', function (result) {
+			if (result) {
+				// Show Status, then call Callback function
 				status.fadeIn(500, function() {
 					setTimeout(function() {
 						status.fadeOut(500, function() {
-							if ( typeof callback === 'function' ) {
+							if (callback && typeof callback === 'function') {
 								callback();
 							}
 						});
 					}, 800);
 				});
-
 			}
 		});
 	}
 };
 
-/* Responsible for Setting Up Play Midnight */
+// Play Midnight Object
+// Load Options, Inject Stylesheet, Favicon, Options, Credits
 var PlayMidnight = {
 
-	/* Store Current Play Midnight Options */
-	options: {
+	options: {},
 
-	},
-
-	/* Initialize */
 	init: function() {
 		var pm = this;
 
-		/* Get Updated Options from Main.js */
-		self.port.emit( 'get-options' );
+		// Request Updated Options from Main.js
+		self.port.emit('get-options');
 
-		/* Load Updated Options */
+		// Load Updated Options on Receive
 		self.port.on( 'options-received', function( options ) {
 			pm.options = options;
 			pm.options.pluginUrl = self.options.pluginUrl;
 
-			/* Inject Stylesheet, Favicon, and Options */
+			// Inject Stylesheet
 			pm.injectStyle();
+
+			// Apply New Favicon
 			pm.updateFavicon();
 
-			/*if ( pm.options.recentActivity === true ) {
-				pm.addSortOptions();
-			}*/
-
-			pm.injectOptions( function() {
-
-				/* Populate Option Checkboxes */
+			// Inject Options Template
+			pm.injectOptions(function() {
+				// Populate Options Template Values
 				PlayMidnightOptions.populate( pm.options );
 
-				/* Bind Option Button Clicks */
+				// Save Options, Refresh Page
 				$('#play-midnight-options #save').on( 'click', function(e) {
 					e.preventDefault();
 
-					/* Refresh on Save */
 					PlayMidnightOptions.save( function() {
 						location.reload(true);
 					} );
 				});
 
+				// Hide Options
 				$('#play-midnight-options #cancel').on( 'click', function(e) {
 					e.preventDefault();
 
@@ -129,7 +123,10 @@ var PlayMidnight = {
 				});
 			});
 
-			/* Add Play Midnight Credits */
+			// Add Recent Activity/Sorting
+			pm.addSortOptions();
+
+			// Add Personal Credits
 			pm.addCredits();
 		});
 	},
@@ -161,50 +158,58 @@ var PlayMidnight = {
 
 	/* Inject Options Page */
 	injectOptions: function( callback ) {
-		/* Create Options Wrapper */
-		var options = $('<div />', { id: 'play-midnight-options' });
+		// Create Options Div
+		var options = $('<div />', {
+			id: 'play-midnight-options',
+		});
 		var pm = this;
 
-		/* Add Options Content from File, Append to Body */
-		options.html( self.options.optionsPage );
+		// Set Options Div HTML
+		options.html(self.options.optionsPage);
+
+		// Append to Body
 		$('body').append( options );
 
-		/* Create Options Button */
+		// Create Play Midnight Button w/ Logo
 		var button = $('<button />', { id: 'btn-pm-options', class: 'button small vertical-align' })
 			.append( $('<img />', { src: pm.options.pluginUrl + 'images/icon64.png' }))
 			.append( '<span>Play Midnight Options</span>' );
 
-		/* Setup Button Click Event */
+		// Show Options on Click
 		button.on( 'click', function() {
 			$('#play-midnight-options').addClass('show');
 		});
 
-		/* Add Button to Nav Bar */
+		// Append Button to Navbar
 		$('#headerBar .nav-bar').prepend( button );
 
-		/* Callback Function */
-		if ( typeof callback === 'function' ) {
+		// Callback Function
+		if (callback && typeof callback === 'function') {
 			callback();
 		}
 	},
 
-	/* Inject Favicon */
+	// Update Favicon to Play Midnight version
 	updateFavicon: function() {
-		/* Check if favicon enabled */
-		if ( this.options.favicon === true ) {
-			/* Try to Override Cache with Timestamp */
-			var iconUrl = this.options.pluginUrl + 'images/favicon.ico' + '?v=' + Date.now();
-
-			/* Remove old Favicon link and Append New */
-			$('link[rel="SHORTCUT ICON"]').remove();
-			$('head').append( $('<link>', {
-				rel: 'shortcut icon',
-				href: iconUrl
-			}) );
+		if ( this.options.favicon !== true ) {
+			return;
 		}
+
+		// Load Newest Icon with Timestamp to prevent Caching
+		var iconUrl = this.options.pluginUrl + 'images/favicon.ico' + '?v=' + Date.now();
+
+		// Remove Old Favicon
+		$('link[rel="SHORTCUT ICON"], link[href="favicon.ico"]').remove();
+
+		// Add New Favicon
+		$('head').append( $('<link>', {
+			type: 'image/x-icon',
+			rel: 'icon',
+			href: iconUrl
+		}) );
 	},
 
-	/* Add Author Credits to Bottom of Sidebar */
+	// Add Personal Credits
 	addCredits: function() {
 		var donateUrl = 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KHH9ZJH42FF4J';
 		var personalUrl = 'http://christieman.com/';
@@ -234,53 +239,19 @@ var PlayMidnight = {
 		}
 	},
 
-	/* Add Recent Activity Sidebar / Filters */
+	// Add Recent Activity and Sorting options
 	addSortOptions: function() {
-		var sortHtml = [
-			'<div id="recent-sort" class="tab-container">',
-			' <a class="header-tab-title selected" data-reason="0">All</a>',
-			' <a class="header-tab-title" data-reason="2">Added</a>',
-			' <a class="header-tab-title" data-reason="3">Played</a>',
-			' <a class="header-tab-title" data-reason="5">Created</a>',
-			'</div>',
-		].join('');
-
-		// Add a link directly to Recent, after the first "Listen Now" link
-		$('<a data-type="recent" class="nav-item-container tooltip" href="">Recent Activity</a>')
-			.insertAfter('#nav_collections a:nth-child(2)');
-
-		// Add sort links to the header
-		function toggleRecentUI() {
-			// Only add them if "Recent" string is present and we're not already in this view.
-			// Otherwise remove the UI completely.
-			if ( $(this).children('.tab-text:contains(Recent)').length && ! $(this).children('#recent-sort').length ) {
-				$(this).append(sortHtml);
-			} else {
-				$('#recent-sort').remove();
-			}
-			$(this).one('DOMSubtreeModified', toggleRecentUI);
+		if ( this.options.recentActivity !== true ) {
+			return;
 		}
 
-		// Make sure this only fires once or else we would be in an infinite loop,
-		// since the function itself modifies the DOM subtree.
-		$('#breadcrumbs').one('DOMSubtreeModified', toggleRecentUI);
-
-		// Filter toggling behavior
-		$('#breadcrumbs').on('click', 'a', function() {
-			var $this = $(this);
-			var reason = parseInt($this.data('reason'));
-			var selector = (reason === 0 ? '*' : '[data-reason=' + reason + ']');
-			var $cards = $('#music-content .card');
-
-			$this.addClass('selected').siblings().removeClass('selected');
-			$cards.filter(selector).show();
-			$cards.not(selector).hide();
-		});
+		// Add a link directly to Recent, after the first "Listen Now" link
+		$('<a data-type="recent" class="nav-item-container tooltip" href="">Recent Activity</a>').insertAfter('#nav_collections a:nth-child(2)');
 	}
 };
 
-/* Initialize Play Midnight */
+
+// Load Play Midnight
 PlayMidnight.init();
 
-
-});
+})(jQuery);
