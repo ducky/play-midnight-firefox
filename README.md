@@ -1,3 +1,6 @@
+## DEPRECATED - Firefox functionality will eventually be rolled into Web Extensions version. Find the new repo here: https://github.com/chrisxclash/play-midnight
+
+
 # Play Midnight - Firefox Addon
 ## A Nighttime Theme for Google Play Music
 
